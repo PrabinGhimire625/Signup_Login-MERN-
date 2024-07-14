@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*{
+  margin:0 ;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body{
+  background: url('background.jpg');
+  background-size:cover ;
+}
+
+.card{
+  height: 200px;
+  width: 200px;
+}
+
+.profileDiv{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 100px;
+}
