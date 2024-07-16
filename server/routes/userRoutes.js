@@ -90,6 +90,13 @@ router.get("/profile", verifyUser, (req, res) => {
   });
 });
 
+// Logout
+router.post("/logout", verifyUser, (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({ message: "Logout successful" });
+});
+
+
 //get all signup user
 router.get("/getAllUser", async(req,res)=>{
   try{
