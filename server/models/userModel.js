@@ -5,6 +5,15 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: "visitor" },
+  otp : {
+    type : Number,
+    select : false
+},
+isOtpVerified : {
+    type : Boolean,
+    default : false,
+    select : false
+},
 });
 
 const User = mongoose.model("User", userSchema);

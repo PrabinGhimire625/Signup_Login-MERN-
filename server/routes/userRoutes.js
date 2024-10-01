@@ -4,6 +4,7 @@ import User from "../models/userModel.js";
 import jwt, { decode } from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import nodemailer from "nodemailer";
+import sendEmail from "../services/sendEmail.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -62,7 +63,7 @@ router.post("/login", async (req, res) => {
 
 //verify user from token before profile pages
 const verifyUser = (req, res, next) => {
-  const token = req.cookies.token;
+  const token = req.cookies.token; //from the login res.cookie("token", token); 
   if (!token) {
     return res.status(401).json({ message: "Token is missing" });
   } else {
@@ -90,8 +91,24 @@ router.get("/profile", verifyUser, (req, res) => {
   });
 });
 
-// Logout
-router.post("/logout", verifyUser, (req, res) => {
+// // Check if the user is logged in from the token inside cookie
+router.get("/isLoggedIn", (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ message: "Not logged in" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Token is invalid" });
+    }
+    res.status(200).json({ message: "Logged in", user: decoded });
+  });
+});
+
+// 
+router.get("/logout", verifyUser, (req, res) => {
+  console.log("Logout route hit");
   res.clearCookie("token");
   res.status(200).json({ message: "Logout successful" });
 });
@@ -143,56 +160,115 @@ router.delete("/deleteUser/:id",async(req, res)=>{
   }
 })
 
-// Forgot Password
+// Forgot Password Route
 router.post("/forgotPassword", async (req, res) => {
-  const { email } = req.body;
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.json({ message: "User not registered" });
+    const { email } = req.body;
+    console.log("Request Body:", req.body);
+
+    if (!email) {
+      return res.status(400).json({ message: "Please provide an email" });
     }
 
-    const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    // Check if the email is registered
+    const userExist = await User.findOne({ email: email }); // Changed to findOne
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+    console.log("User Exist Check:", userExist); // Log to see the found user
+
+    if (!userExist) { // Check if userExist is null or undefined
+      return res.status(404).json({ message: "Email is not registered" });
+    }
+
+    // Generate and save OTP
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    userExist.otp = otp; // Assuming you have a field `otp` in your user model
+    await userExist.save();
+
+    // Send OTP via email
+    await sendEmail({
+      email: email,
+      subject: "Your OTP forgotPassword",
+      message: `Your OTP is ${otp}. Do not share this with anyone.`,
     });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Reset password",
-      text: `http://localhost:5173/resetPassword/${token}`,
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log(error);
-      } else {
-        console.log("Email sent: " + info.response);
-      }
-    });
-
-    res.json({ message: "Password reset email sent" });
+    res.status(200).json({ message: "OTP sent successfully", data: email });
   } catch (err) {
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("Error in forgotPassword:", err); // Log the error
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-//updates user
-// router.patch("/userUpdate/:id", async(req, res)=>{
-//   const id=req.params.id
-//   const {username, email, password}=req.body
-//   await User.findByIdAndUpdate(id, {
-//     username:username,
-//     email:email,
-//     password:password
-//   })
-//   res.status(200).json({message:"User update successfully"})
-// })
+
+// Verify OTP Route
+router.post("/verifyOtp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Please provide both email and OTP" });
+    }
+
+    // Check if the OTP is correct for the email
+    const userExists = await User.find({ email: email }).select("+otp +isOtpVerified");
+
+    if (userExists.length === 0) {
+      return res.status(404).json({ message: "Email is not registered" });
+    }
+
+    if (userExists[0].otp !== parseInt(otp, 10)) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // Dispose of OTP after successful verification
+    userExists[0].otp = undefined;
+    userExists[0].isOtpVerified = true;
+    await userExists[0].save();
+
+    res.status(200).json({ message: "OTP verified successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+//reset password
+router.post("/resetPassword",async (req,res)=>{
+  const {email,newPassword,confirmPassword} = req.body
+  if(!email || !newPassword || !confirmPassword){
+      return res.status(400).json({
+          message : "Please provide email,newPassword,confirmPassword"
+      })
+  }
+  if(newPassword !== confirmPassword){
+      return res.status(400).json({
+          message : "newPassword and confirmPassword doesn't match"
+      })
+  }
+
+  const userExists = await User.find({email:email}).select("+isOtpVerified")
+  if(userExists.length == 0){
+      return res.status(404).json({
+          message : "User email not registered"
+      })
+  }
+  console.log(userExists)
+  if(userExists[0].isOtpVerified != true){
+      return res.status(403).json({
+          message : "You cannot perform this action"
+      })
+  }
+
+  userExists[0].password = bcrypt.hashSync(newPassword,10)
+  userExists[0].isOtpVerified = false;
+  await userExists[0].save()
+
+  res.status(200).json({
+      message : "Password changed successfully"
+  })
+}
+)
+
+
 
 export default router;

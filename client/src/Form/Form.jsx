@@ -2,15 +2,18 @@ import React from "react";
 import { FaUser, FaLock } from "react-icons/fa";
 import { MdEmail } from "react-icons/md";
 import { Link } from "react-router-dom";
+
 import "./../login/login.css";
+// import { AuthContext } from "../context/AuthContext.jsx";
+
 
 function Form({ type, username, setUsername, email, setEmail, password, setPassword, handleSubmit }) {
+  // const {flag}=useContext(AuthContext)
   return (
     <div className="container">
       <div className="wrapper">
         <form onSubmit={handleSubmit}>
           <h1>{type}</h1>
-
           {type === "Signup" && (
             <div className="input-box">
               <input
@@ -48,7 +51,7 @@ function Form({ type, username, setUsername, email, setEmail, password, setPassw
 
           <div className="remember-forgot">
             <label>
-              <input type="checkbox" />
+              <input type="checkbox"/>
               Remember me
             </label>
             <Link to="/forgotPassword">Forgot Password?</Link>

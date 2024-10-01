@@ -10,21 +10,20 @@ const ForgotPassword = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+  
     axios
       .post("http://localhost:3000/auth/forgotPassword", { email })
       .then((res) => {
-        if (res.data.status) {
-          alert("Check your email for reset password link!");
-          navigate("/login");
-        } else {
-          alert("Failed to send reset link. Please try again.");
-        }m
+        console.log("Response:", res); // Log the full response
+          alert("Check your email for the reset password link!");
+          navigate("/verifyOtp"); // Navigate to the VerifyOtp page
       })
       .catch((err) => {
-        console.log("Error:", err);
+        console.error("Error:", err); // Log the error
         alert("Failed to send reset link. Please try again later.");
       });
   };
+  
 
   return (
     <div className="container">

@@ -16,6 +16,9 @@ import Profile from "./profile/Profile.jsx";
 import UserLists from "./AdminPart/UserLists.jsx";
 import EditUser from "./AdminPart/EditUser.jsx";
 import AuthState from "./context/AuthState.jsx";
+import VerifyOtp from "./ForgotPassword/VerifyOtp.jsx";
+import ResetPassword from "./ForgotPassword/ResetPassword.jsx";
+
 function App() {
   return (
     <AuthState>
@@ -25,6 +28,8 @@ function App() {
           <Route path="/home" element={<Home />}></Route>
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/verifyOtp" element={<VerifyOtp />} />
+          <Route path="/resetPassword" element={<ResetPassword />} />
           <Route path="/profile" element={<Profile />}></Route>
           <Route path="/dashboard" element={<Dashboard />}></Route>
           <Route path="/forgotPassword" element={<ForgotPassword />} />
